@@ -1,3 +1,4 @@
+
 FROM alpine:3.11 as build
 
 LABEL maintainer="Mohan Raj Janardhan <mjanardh@redhat.com>"
@@ -11,7 +12,7 @@ RUN wget   https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VER}/sourc
 RUN tar xvjf boost_${BOOST_VER_}.tar.bz2
 WORKDIR /boost_${BOOST_VER_}
 RUN ./bootstrap.sh
-RUN ./b2 -j 6 install
+#RUN ./b2 -j 6 install
 
 WORKDIR /
 # Build and install grpc
@@ -29,8 +30,12 @@ RUN make -j 6
 RUN make install
 
 ADD . /kuksa.val
-RUN  rm -rf /kuksa.val/kuksa-val-server/build  && mkdir  /kuksa.val/kuksa-val-server/build 
-WORKDIR /kuksa.val/kuksa-val-server/build
+#RUN rm -rf /kuksa.val/kuksa-val-server/build &&  mkdir -p /kuksa.val/kuksa-val-server/build
+WORKDIR /kuksa.val
+RUN ls -al
+WORKDIR /kuksa.val/kuksa.val
+RUN ls -al
+WORKDIR /kuksa.val/kuksa.val/kuksa-val-server/build
 RUN cmake ..
 RUN make -j 4
 RUN ls
@@ -43,12 +48,9 @@ COPY --from=build /deploy /kuksa.val
 WORKDIR /kuksa.val
 
 ENV LOG_LEVEL=INFO
-#Usually you want this to be 0.0.0.0 when using porter port expose via -p. 
+#Usually you want this to be 0.0.0.0 when using porter port expose via -p.
 ENV BIND_ADDRESS=0.0.0.0
 
 EXPOSE 8090/tcp
 
 CMD /kuksa.val/startkuksaval.sh
-
-
-
