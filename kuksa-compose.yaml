@@ -1,0 +1,24 @@
+services:
+  #consumer:
+   #image: 
+   #networks:
+   #- net-kvs
+   # - net-db
+  kuksa-val-server:
+    image: awesome/webapp
+    build: ./kuksa-val-server.Containerfile
+    networks:
+      - net-consumer
+      - net-db
+      - net-provider
+        #kuksa-databroker:
+        #image: awesome/monitoring
+        #networks:
+        #- net-consumer
+        #- net-kvs
+        #- net-provider
+        #provider:
+        #image: awesome/backend
+        #networks:
+        #- net-kvs
+        #- net-db
