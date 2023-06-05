@@ -1,4 +1,3 @@
-
 FROM alpine:3.11 as build
 
 LABEL maintainer="Mohan Raj Janardhan <mjanardh@redhat.com>"
@@ -6,12 +5,12 @@ LABEL maintainer="Mohan Raj Janardhan <mjanardh@redhat.com>"
 RUN apk update && apk add cmake wget alpine-sdk linux-headers openssl-dev libstdc++ mosquitto-dev
 
 #Build Boost 1.75
-ENV BOOST_VER=1.75.0
-ENV BOOST_VER_=1_75_0
-RUN wget   https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VER}/source/boost_${BOOST_VER_}.tar.bz2
-RUN tar xvjf boost_${BOOST_VER_}.tar.bz2
-WORKDIR /boost_${BOOST_VER_}
-RUN ./bootstrap.sh
+#ENV BOOST_VER=1.75.0
+#ENV BOOST_VER_=1_75_0
+#RUN wget   https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VER}/source/boost_${BOOST_VER_}.tar.bz2
+#RUN tar xvjf boost_${BOOST_VER_}.tar.bz2
+#WORKDIR /boost_${BOOST_VER_}
+#RUN ./bootstrap.sh
 #RUN ./b2 -j 6 install
 
 WORKDIR /
@@ -29,14 +28,22 @@ RUN cmake -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE ..
 RUN make -j 6
 RUN make install
 
-ADD . /kuksa.val
-#RUN rm -rf /kuksa.val/kuksa-val-server/build &&  mkdir -p /kuksa.val/kuksa-val-server/build
+WORKDIR /
+RUN mkdir kuksa.val 
 WORKDIR /kuksa.val
-RUN ls -al
-WORKDIR /kuksa.val/kuksa.val
-RUN ls -al
-WORKDIR /kuksa.val/kuksa.val/kuksa-val-server/build
+ADD . /kuksa.val
+RUN git submodule update --init --recursive
+RUN rm -rf /kuksa.val/kuksa-val-server/build &&  mkdir -p /kuksa.val/kuksa-val-server/build
+WORKDIR /kuksa.val/kuksa-val-server/build
 RUN cmake ..
+WORKDIR /kuksa.val/kuksa-val-server/build/_deps/boost-src/tools/build/src
+RUN ls -al
+RUN cp bootstrap.jam ./engine/.
+RUN cp build-system.jam ./engine/.
+WORKDIR /kuksa.val/kuksa-val-server/build/_deps/boost-src/tools/build/src/engine
+RUN ls -al
+#RUN ./b2 --prefix= 
+WORKDIR /kuksa.val/kuksa-val-server/build
 RUN make -j 4
 RUN ls
 RUN /kuksa.val/kuksa-val-server/docker/collect-deployment-artifacts.sh
@@ -54,3 +61,5 @@ ENV BIND_ADDRESS=0.0.0.0
 EXPOSE 8090/tcp
 
 CMD /kuksa.val/startkuksaval.sh
+
+ENTRYPOINT ["/bin/sh"]
