@@ -1,6 +1,6 @@
 FROM registry.fedoraproject.org/fedora:38 as build
 
-RUN yum -y update && yum install -y cmake g++ wget openssl-devel libstdc++ bzip2 git
+RUN yum -y update && yum install -y cmake g++ wget openssl-devel libstdc++ bzip2 git protobuf protobuf-devel grpc
 
 #Build Boost 1.75
 ENV BOOST_VER=1.75.0
@@ -18,13 +18,13 @@ RUN git clone --recurse-submodules -b v${GRPC_VER}  --single-branch --depth 1 --
 RUN mkdir -p /grpc/build
 WORKDIR /grpc/build
 RUN cmake -DgRPC_INSTALL=ON  -DgRPC_BUILD_TESTS=OFF -DgRPC_SSL_PROVIDER=package ..
-#RUN make -k -j 6
-#RUN make install
+RUN make -j 6
+RUN make install
 RUN mkdir -p /grpc/third_party/abseil-cpp/build
 WORKDIR /grpc/third_party/abseil-cpp/build
 RUN cmake -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE ..
-#RUN make -k -j 6
-#RUN make install
+RUN make -j 6
+RUN make install
 
 ADD . /kuksa.val
 RUN rm -rf /kuksa.val/kuksa-val-server/build &&  mkdir -p /kuksa.val/kuksa-val-server/build
