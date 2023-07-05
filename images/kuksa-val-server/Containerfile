@@ -1,6 +1,6 @@
 FROM registry.fedoraproject.org/fedora:38 as build
 
-RUN yum -y update && yum install -y cmake g++ wget openssl-devel libstdc++ bzip2 git protobuf protobuf-devel grpc
+RUN dnf -y update && dnf install -y cmake g++ wget openssl-devel libstdc++ bzip2 git protobuf protobuf-devel grpc
 
 #Build Boost 1.75
 ENV BOOST_VER=1.75.0
@@ -8,13 +8,16 @@ ENV BOOST_VER_=1_75_0
 
 ADD . /
 RUN git clone --recursive https://github.com/eclipse/kuksa.val.git
-WORKDIR /kuksa.val
-RUN cmake .. 
+RUN cd /kuksa.val/kuksa-val-server
+RUN ls -al
+RUN mkdir build
+RUN cd build
+RUN cmake -DMOSQUITTO_INCLUDE_DIR=/kuksa.val/kuksa-val-server/src ..
 RUN make -j 4
 RUN ls
 RUN /kuksa.val/kuksa-val-server/docker/collect-deployment-artifacts.sh
 
-FROM registry.fedoraproject.org/fedora:38 as build
+#FROM registry.fedoraproject.org/fedora:38 as build
 
 COPY --from=build /deploy /kuksa.val
 WORKDIR /kuksa.val
