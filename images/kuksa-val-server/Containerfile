@@ -14,6 +14,7 @@ RUN mkdir build
 RUN cd build
 RUN cmake -DMOSQUITTO_INCLUDE_DIR=/kuksa.val/kuksa-val-server/src ..
 RUN make -j 4
+RUN make install
 RUN ls
 RUN /kuksa.val/kuksa-val-server/docker/collect-deployment-artifacts.sh
 
