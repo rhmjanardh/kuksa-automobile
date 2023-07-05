@@ -11,8 +11,9 @@ RUN git clone --recursive https://github.com/eclipse/kuksa.val.git
 RUN cd /kuksa.val/kuksa-val-server
 RUN ls -al
 RUN mkdir build
-RUN cd build
-RUN cmake -DMOSQUITTO_INCLUDE_DIR=/kuksa.val/kuksa-val-server/src ..
+WORKDIR /kuksa/kuksa-val-server/build
+RUN ls -al
+RUN cmake -DMOSQUITTO_INCLUDE_DIR=/kuksa.val/kuksa-val-server/src -DBoost_INCLUDE_DIR=/kuksa/kuksa-val-server/include ..
 RUN make -j 4
 RUN make install
 RUN ls
