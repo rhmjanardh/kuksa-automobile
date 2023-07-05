@@ -1,28 +1,64 @@
-FROM registry.fedoraproject.org/fedora:38 as build
+FROM registry.fedoraproject.org/fedora:38
 
-RUN yum -y update && yum install -y cmake g++ wget openssl-devel libstdc++ bzip2 git protobuf protobuf-devel grpc
+ARG KUKSA_VAL_VER=0.3.1
+ARG KUKSA_VAL_BUILD_TYPE=Release
 
-#Build Boost 1.75
-ENV BOOST_VER=1.75.0
-ENV BOOST_VER_=1_75_0
+# Install required packages
+RUN dnf -y update && dnf install -y \
+patch \
+cmake \
+g++ \
+wget \
+openssl-devel \
+libstdc++ \
+bzip2 \
+git \
+protobuf \
+protobuf-devel \
+grpc \
+grpc-cpp \
+grpc-devel \
+boost \
+boost-devel \
+mosquitto \
+mosquitto-devel
 
-ADD . /
-RUN git clone --recursive https://github.com/eclipse/kuksa.val.git
-WORKDIR /kuksa.val
-RUN cmake .. 
-RUN make -j 4
-RUN ls
-RUN /kuksa.val/kuksa-val-server/docker/collect-deployment-artifacts.sh
+# Download kuksa
+RUN git clone --branch ${KUKSA_VAL_VER} https://github.com/eclipse/kuksa.val.git
 
-FROM registry.fedoraproject.org/fedora:38 as build
+# Patches
+COPY /files /
+RUN patch -t -i /kuksa.val/kuksa-val-server/grpc.cmake.diff /kuksa.val/kuksa-val-server/grpc.cmake
 
-COPY --from=build /deploy /kuksa.val
-WORKDIR /kuksa.val
+RUN patch -t -i /kuksa.val/kuksa-val-server/boost.cmake.diff /kuksa.val/kuksa-val-server/boost.cmake
 
-ENV LOG_LEVEL=INFO
-#Usually you want this to be 0.0.0.0 when using porter port expose via -p.
-ENV BIND_ADDRESS=0.0.0.0
+# Build
+RUN mkdir -p /kuksa.val/kuksa-val-server/_build
 
-EXPOSE 8090/tcp
+WORKDIR /kuksa.val/kuksa-val-server/_build
 
-CMD /kuksa.val/startkuksaval.sh
+RUN (cd ../..; git submodule init; git submodule update)
+
+RUN cmake \
+-DMOSQUITTO_INCLUDE_DIR=/usr/include \
+-DBoost_INCLUDE_DIR=/usr/include \
+-DCMAKE_BUILD_TYPE=Release \
+.. && \
+make -j 4  && \
+make install && \
+make clean
+
+# Move files around
+RUN mkdir -p /etc/kuksa-val-server/{tls,vss}
+
+RUN mv /usr/local/bin/kuksa-val-server/kuksa-val-server /usr/bin/kuksa-val-server && \
+mv /usr/local/bin/kuksa-val-server/*.pub /etc/kuksa-val-server/tls && \
+mv /usr/local/bin/kuksa-val-server/*.pem /etc/kuksa-val-server/tls && \
+mv /usr/local/bin/kuksa-val-server/*.key /etc/kuksa-val-server/tls && \
+mv /usr/local/bin/kuksa-val-server/vss* /etc/kuksa-val-server/vss/
+
+RUN rm -rf /kuksa.val
+
+ENTRYPOINT ["/usr/bin/kuksa-val-server"]
+
+CMD ["--vss", "/etc/kuksa-val-server/vss/vss_release_3.1.1.json", "--cert-path", "/etc/kuksa-val-server/tls", "--log-level", "ALL"]

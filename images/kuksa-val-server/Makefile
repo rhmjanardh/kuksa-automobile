@@ -9,4 +9,4 @@ build:
 	@ podman build -t ${IMAGE} .
 
 debug: build
-	@ podman run -it  ${IMAGE} /bin/bash
+	@ podman run -it  --entrypoint /bin/bash ${IMAGE}
