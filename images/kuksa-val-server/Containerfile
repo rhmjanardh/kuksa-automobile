@@ -1,5 +1,6 @@
 FROM registry.fedoraproject.org/fedora:38
 
+
 ARG KUKSA_VAL_VER=0.3.1
 ARG KUKSA_VAL_BUILD_TYPE=Release
 
