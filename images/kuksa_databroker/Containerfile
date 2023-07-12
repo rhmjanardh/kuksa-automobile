@@ -14,10 +14,40 @@
 # This is expected to be executed in the kuksa.val top-level directory
 
 # This builds KUKSA databroker
-FROM registry.fedoraproject.org/fedora:38 as build
+FROM registry.fedoraproject.org/fedora:38
 
-RUN dnf update && dnf install -y protobuf-compiler \
-    && dnf clean && rm -rf /var/lib/apt/lists/*
+RUN dnf  -y update && dnf install -y \
+protobuf-compiler \
+protobuf \
+protobuf-devel \
+patch \
+cmake \
+g++ \
+wget \
+libstdc++ \
+bzip2 \
+grpc \
+grpc-cpp \
+grpc-devel \
+boost \
+boost-devel \
+mosquitto \
+mosquitto-devel \
+rust \
+rust-src \
+git \
+cargo \
+@development-tools \
+openssl-devel  && rm -rf /var/lib/apt/lists/* 
+
+RUN git clone https://github.com/eclipse/kuksa.val.git
+
+
+#FROM ghcr.io/rust-cross/rust-musl-cross:x86_64-musl AS builder-amd64
+ENV BUILDTARGET="x86_64-unknown-linux-musl"
+
+#FROM builder-$TARGETARCH as builder
+#ARG TARGETARCH
 
 # This will speed up fetching the crate.io index in the future, see
 # https://blog.rust-lang.org/2022/06/22/sparse-registry-testing.html
@@ -26,10 +56,12 @@ ENV CARGO_UNSTABLE_SPARSE_REGISTRY=true
 RUN echo "Building for $TARGETARCH"
 ENV SRC="/home/rust/src"
 WORKDIR ${SRC}
+RUN cp -rf /kuksa.val/kuksa_databroker/ .
 
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 RUN cargo install cargo-license
+#ENV PATH=/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # We need to add all files, because .git directory is needed to
 # extract verson information during build, and we can not leave
@@ -40,17 +72,17 @@ COPY . .
 # Creating BOM
 WORKDIR ${SRC}/kuksa_databroker/createbom
 RUN rm -rf ../thirdparty
-RUN python3 createbom.py ../databroker
+RUN python3 createbom.py  ../databroker
 
-WORKDIR ${SRC}/kuksa_databroker/databroker 
+WORKDIR ${SRC}/kuksa_databroker/databroker
 
 RUN cargo build --bin databroker --release --target $BUILDTARGET
 RUN mv ${SRC}/target/$BUILDTARGET/release/databroker ${SRC}/
 
-FROM scratch
+#FROM scratch
 
-COPY --from=builder /home/rust/src/databroker /app/databroker
-COPY --from=builder /home/rust/src/kuksa_databroker/databroker/thirdparty /app/thirdparty
+COPY /home/rust/src/databroker /app/databroker
+COPY /home/rust/src/kuksa_databroker/databroker/thirdparty /app/thirdparty
 
 ADD ./data/vss-core/vss_release_3.1.1.json vss_release_3.1.1.json
 ADD ./data/vss-core/vss_release_4.0.json vss_release_4.0.json
