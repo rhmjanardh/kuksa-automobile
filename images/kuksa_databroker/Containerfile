@@ -42,26 +42,18 @@ openssl-devel  && rm -rf /var/lib/apt/lists/*
 
 RUN git clone https://github.com/eclipse/kuksa.val.git
 
-
-#FROM ghcr.io/rust-cross/rust-musl-cross:x86_64-musl AS builder-amd64
-ENV BUILDTARGET="x86_64-unknown-linux-musl"
-
-#FROM builder-$TARGETARCH as builder
-#ARG TARGETARCH
-
-# This will speed up fetching the crate.io index in the future, see
-# https://blog.rust-lang.org/2022/06/22/sparse-registry-testing.html
-ENV CARGO_UNSTABLE_SPARSE_REGISTRY=true
-
-RUN echo "Building for $TARGETARCH"
 ENV SRC="/home/rust/src"
 WORKDIR ${SRC}
-RUN cp -rf /kuksa.val/kuksa_databroker/ .
-
+RUN ls -al
+RUN cargo new project
+RUN cp -rf ${SRC}/project/ ../.
+RUN ls -al
+WORKDIR ${SRC}/project
+RUN ls -al
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 RUN cargo install cargo-license
-#ENV PATH=/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV PATH=/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # We need to add all files, because .git directory is needed to
 # extract verson information during build, and we can not leave
@@ -69,28 +61,16 @@ RUN cargo install cargo-license
 # Does not influence final image size due to multistage build
 COPY . .
 
-# Creating BOM
-WORKDIR ${SRC}/kuksa_databroker/createbom
-RUN rm -rf ../thirdparty
-RUN python3 createbom.py  ../databroker
-
-WORKDIR ${SRC}/kuksa_databroker/databroker
-
-RUN cargo build --bin databroker --release --target $BUILDTARGET
-RUN mv ${SRC}/target/$BUILDTARGET/release/databroker ${SRC}/
-
-#FROM scratch
-
-COPY /home/rust/src/databroker /app/databroker
-COPY /home/rust/src/kuksa_databroker/databroker/thirdparty /app/thirdparty
-
-ADD ./data/vss-core/vss_release_3.1.1.json vss_release_3.1.1.json
-ADD ./data/vss-core/vss_release_4.0.json vss_release_4.0.json
+WORKDIR ${SRC}/project
+ENV RUST_BACKTRACE=full
+RUN cat Cargo.toml
+RUN cargo install cargo-dependency-inheritor
+RUN cargo dependency-inheritor --workspace-path ${SRC}/project/Cargo.toml -n 1
+RUN cargo build --release
 
 ENV KUKSA_DATA_BROKER_ADDR=0.0.0.0
 ENV KUKSA_DATA_BROKER_PORT=55555
-ENV KUKSA_DATA_BROKER_METADATA_FILE=vss_release_4.0.json
 
 EXPOSE $KUKSA_DATA_BROKER_PORT
 
-ENTRYPOINT [ "/app/databroker" ]
+ENTRYPOINT [ "/bin/bash" ]
