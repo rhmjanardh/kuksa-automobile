@@ -1,33 +1,69 @@
-FROM registry.fedoraproject.org/fedora:38 as build
 
-RUN dnf -y update && dnf install -y cmake g++ wget openssl-devel libstdc++ bzip2 git protobuf protobuf-devel grpc
+FROM registry.fedoraproject.org/fedora:38
 
-#Build Boost 1.75
-ENV BOOST_VER=1.75.0
-ENV BOOST_VER_=1_75_0
 
-ADD . /
-RUN git clone --recursive https://github.com/eclipse/kuksa.val.git
-RUN cd /kuksa.val/kuksa-val-server
-RUN ls -al
-RUN mkdir build
-WORKDIR /kuksa/kuksa-val-server/build
-RUN ls -al
-RUN cmake -DMOSQUITTO_INCLUDE_DIR=/kuksa.val/kuksa-val-server/src -DBoost_INCLUDE_DIR=/kuksa/kuksa-val-server/include ..
-RUN make -j 4
-RUN make install
-RUN ls
-RUN /kuksa.val/kuksa-val-server/docker/collect-deployment-artifacts.sh
+ARG KUKSA_VAL_VER=0.3.1
+ARG KUKSA_VAL_BUILD_TYPE=Release
 
-#FROM registry.fedoraproject.org/fedora:38 as build
+# Install required packages
+RUN dnf -y update && dnf install -y \
+patch \
+cmake \
+g++ \
+wget \
+openssl-devel \
+libstdc++ \
+bzip2 \
+git \
+protobuf \
+protobuf-devel \
+grpc \
+grpc-cpp \
+grpc-devel \
+boost \
+boost-devel \
+mosquitto \
+mosquitto-devel \
+net-tools \
+iputils \
+iproute
 
-COPY --from=build /deploy /kuksa.val
-WORKDIR /kuksa.val
+# Download kuksa
+RUN git clone --branch ${KUKSA_VAL_VER} https://github.com/eclipse/kuksa.val.git
 
-ENV LOG_LEVEL=INFO
-#Usually you want this to be 0.0.0.0 when using porter port expose via -p.
-ENV BIND_ADDRESS=0.0.0.0
+# Patches
+COPY /files /
+RUN patch -t -i /kuksa.val/kuksa-val-server/grpc.cmake.diff /kuksa.val/kuksa-val-server/grpc.cmake
 
-EXPOSE 8090/tcp
+RUN patch -t -i /kuksa.val/kuksa-val-server/boost.cmake.diff /kuksa.val/kuksa-val-server/boost.cmake
 
-CMD /kuksa.val/startkuksaval.sh
+# Build
+RUN mkdir -p /kuksa.val/kuksa-val-server/_build
+
+WORKDIR /kuksa.val/kuksa-val-server/_build
+
+RUN (cd ../..; git submodule init; git submodule update)
+
+RUN cmake \
+-DMOSQUITTO_INCLUDE_DIR=/usr/include \
+-DBoost_INCLUDE_DIR=/usr/include \
+-DCMAKE_BUILD_TYPE=Release \
+.. && \
+make -j 4  && \
+make install && \
+make clean
+
+# Move files around
+RUN mkdir -p /etc/kuksa-val-server/{tls,vss}
+
+RUN mv /usr/local/bin/kuksa-val-server/kuksa-val-server /usr/bin/kuksa-val-server && \
+mv /usr/local/bin/kuksa-val-server/*.pub /etc/kuksa-val-server/tls && \
+mv /usr/local/bin/kuksa-val-server/*.pem /etc/kuksa-val-server/tls && \
+mv /usr/local/bin/kuksa-val-server/*.key /etc/kuksa-val-server/tls && \
+mv /usr/local/bin/kuksa-val-server/vss* /etc/kuksa-val-server/vss/
+
+RUN rm -rf /kuksa.val
+
+ENTRYPOINT ["/usr/bin/kuksa-val-server"]
+
+CMD ["--vss", "/etc/kuksa-val-server/vss/vss_release_3.1.1.json", "--cert-path", "/etc/kuksa-val-server/tls", "--log-level", "ALL"]
