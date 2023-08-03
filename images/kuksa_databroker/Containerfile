@@ -14,15 +14,19 @@
 # This is expected to be executed in the kuksa.val top-level directory
 
 # This builds KUKSA databroker
-FROM registry.fedoraproject.org/fedora:38
+FROM registry.fedoraproject.org/fedora:38 AS builder
 
 RUN dnf  -y update && dnf install -y \
+automake \
 protobuf-compiler \
 protobuf \
 protobuf-devel \
 patch \
 cmake \
 g++ \
+gcc \
+gcc-c++ \
+kernel-devel \
 wget \
 libstdc++ \
 bzip2 \
@@ -38,22 +42,38 @@ rust-src \
 git \
 cargo \
 @development-tools \
-openssl-devel  && rm -rf /var/lib/apt/lists/* 
-
-RUN git clone https://github.com/eclipse/kuksa.val.git
+openssl-devel \
+python3-yaml \
+net-tools \
+iputils \
+iproute \
+python3-devel \
+pip
 
 ENV SRC="/home/rust/src"
-WORKDIR ${SRC}
-RUN ls -al
-RUN cargo new project
-RUN cp -rf ${SRC}/project/ ../.
-RUN ls -al
-WORKDIR ${SRC}/project
-RUN ls -al
-ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
-RUN cargo install cargo-license
+WORKDIR ${SRC}
+
+RUN git clone https://github.com/eclipse/kuksa.val.git
+RUN git clone https://github.com/COVESA/vehicle_signal_specification.git
+
+WORKDIR ${SRC}/kuksa.val/target
+
+RUN cp -rf ${SRC}/kuksa.val/kuksa_databroker/databroker .
+RUN cp -rf ${SRC}/vehicle_signal_specification/ .
+
+WORKDIR ${SRC}/kuksa.val/target/vehicle_signal_specification/
+
+RUN rm -rf vss-tools
+RUN git clone https://github.com/COVESA/vss-tools.git
+RUN pip install anytree setuptools gql[all] graphql-core
+RUN ${SRC}/kuksa.val/target/vehicle_signal_specification/vss-tools/vspec2json.py -I ./spec ./spec/VehicleSignalSpecification.vspec vss.json
+RUN chmod +x vss.json
+
+WORKDIR ${SRC}/kuksa.val/kuksa_databroker/databroker
+
 ENV PATH=/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+RUN cargo install cargo-license
 
 # We need to add all files, because .git directory is needed to
 # extract verson information during build, and we can not leave
@@ -61,16 +81,28 @@ ENV PATH=/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbi
 # Does not influence final image size due to multistage build
 COPY . .
 
-WORKDIR ${SRC}/project
-ENV RUST_BACKTRACE=full
-RUN cat Cargo.toml
-RUN cargo install cargo-dependency-inheritor
-RUN cargo dependency-inheritor --workspace-path ${SRC}/project/Cargo.toml -n 1
+WORKDIR ${SRC}/kuksa.val/kuksa_databroker
+
+RUN (cd createbom; python3 createbom.py ../databroker)
 RUN cargo build --release
 
+WORKDIR ${SRC}/kuksa.val/target/release
+
+FROM registry.fedoraproject.org/fedora:38
+
+ENV SRC="home/rust/src"
+RUN mkdir -p /usr/bin/release
+COPY --from=builder ${SRC}/kuksa.val/target/release/databroker /usr/bin/data-broker
+COPY --from=builder ${SRC}/kuksa.val/target/release/databroker-cli /usr/bin/data-broker-cli
+COPY --from=builder ${SRC}/kuksa.val/target/ /usr/bin/release
+COPY --from=builder ${SRC}/kuksa.val/target/vehicle_signal_specification/vss.json /usr/bin/release
+
+RUN ls -al /usr/bin/release/
 ENV KUKSA_DATA_BROKER_ADDR=0.0.0.0
 ENV KUKSA_DATA_BROKER_PORT=55555
+ENV KUKSA_DATA_BROKER_METADATA_FILE=vss.json
 
 EXPOSE $KUKSA_DATA_BROKER_PORT
 
-ENTRYPOINT [ "/bin/bash" ]
+ENTRYPOINT ["/usr/bin/data-broker"]
+CMD ["--vss", "/usr/bin/release/vss.json"]

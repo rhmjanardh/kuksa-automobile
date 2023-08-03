@@ -22,7 +22,10 @@ grpc-devel \
 boost \
 boost-devel \
 mosquitto \
-mosquitto-devel
+mosquitto-devel \
+net-tools \
+iputils \
+iproute
 
 # Download kuksa
 RUN git clone --branch ${KUKSA_VAL_VER} https://github.com/eclipse/kuksa.val.git
