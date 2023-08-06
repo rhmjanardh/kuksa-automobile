@@ -1,0 +1,51 @@
+ROM registry.fedoraproject.org/fedora:38 AS builder
+
+ARG KUKSA_VAL_VER=0.3.1
+
+RUN dnf  -y update && dnf install -y \
+automake \
+protobuf-compiler \
+protobuf \
+protobuf-devel \
+patch \
+cmake \
+g++ \
+gcc \
+gcc-c++ \
+kernel-devel \
+wget \
+libstdc++ \
+bzip2 \
+grpc \
+grpc-cpp \
+grpc-devel \
+boost \
+boost-devel \
+mosquitto \
+mosquitto-devel \
+rust \
+rust-src \
+git \
+cargo \
+@development-tools \
+openssl-devel \
+python3-yaml \
+net-tools \
+iputils \
+iproute \
+python3-devel \
+pip
+
+RUN git clone --branch ${KUKSA_VAL_VER} https://github.com/eclipse/kuksa.val.git
+
+ENV SRC=/kuksa.val/kuksa-client
+
+WORKDIR ${SRC}
+
+RUN mkdir --parents ${SRC}/.venv
+RUN python3 -m venv ${SRC}/.venv/kuksa-client
+RUN source ${SRC}/.venv/kuksa-client/bin/activate
+RUN pip install --upgrade pip \
+    pip install -r requirement.txt -e . \
+    kuksa-client --help \
+    kuksa-client --ip 127.0.0.1 --port 55555 --protocol grpc
