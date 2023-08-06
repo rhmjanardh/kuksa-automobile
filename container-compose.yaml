@@ -3,13 +3,22 @@ networks:
        default:
          name: kuksa-automobile_network
 services:
-  kuksa-val-server:
-    image: images/kuksa-val-server
+  kuksa-val-server_1:
     build: images/kuksa-val-server
+    links:
+      - kuksa-databroker
+      - kuksa-client
     ports:
       - 8080:8080
-  kuksa-databroker:
-    image: images/kuksa_databroker
+  kuksa-databroker_1:
     build: images/kuksa_databroker
+    links:
+      - kuksa-val-server
+      - kuksa-client
     ports:
       - 55555:55555
+  kuksa-client_1:
+    build: images/kuksa-client
+    links:
+      - kuksa-val-server
+      - kuksa-databroker 
