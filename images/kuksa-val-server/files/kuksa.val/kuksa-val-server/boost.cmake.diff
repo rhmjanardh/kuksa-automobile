@@ -1,4 +1,4 @@
 14c14
 < set(BOOST_VER 1.78.0)
 ---
-> set(BOOST_VER 1.75.0)
+> set(BOOST_VER 1.82.0)

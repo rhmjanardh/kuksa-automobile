@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import time
+from random import randrange
+
+from kuksa_client import KuksaClientThread
+from kuksa_client.grpc import VSSClient
+from kuksa_client.grpc import Datapoint
+
+
+KUKSA_DATABROKER_HOST = os.environ.get('KUKSA_DATABROKER_HOST', '127.0.0.1')
+KUKSA_DATABROKER_PORT = int(os.environ.get('KUKSA_DATABROKER_PORT', 55555))
+KUKSA_SERVER_HOST = os.environ.get('KUKSA_SERVER_HOST', '127.0.0.1')
+KUKSA_SERVER_PORT = int(os.environ.get('KUKSA_SERVER_PORT', 8090))
+
+
+def sub():
+    with VSSClient(KUKSA_DATABROKER_HOST, KUKSA_DATABROKER_PORT) as client:
+        for updates in client.subscribe_current_values([
+            'Vehicle.Speed',
+        ]):
+            speed = updates['Vehicle.Speed'].value
+            print(f'Vehicle.Speed: {speed}')
+
+
+def pub():
+    with VSSClient(KUKSA_DATABROKER_HOST, KUKSA_DATABROKER_PORT) as client:
+        while True:
+            speed = randrange(10, 100)
+            client.set_current_values({
+                'Vehicle.Speed': Datapoint(speed),
+            })
+
+            print(f'Feeding Vehicle.Speed to {speed}')
+            
+            time.sleep(3)
+
+
+def getvalue():
+    config = {
+        'address': KUKSA_SERVER_HOST,
+        'port': KUKSA_SERVER_PORT,
+        'protocol': 'ws',
+        'insecure': True
+    }
+    client = KuksaClientThread(config)
+    client.start()
+    client.authorize()
+
+    print(client.getValue('Vehicle.Speed'))
+
+    client.stop()
+
+
+def setvalue():
+    config = {
+        'address': KUKSA_SERVER_HOST,
+        'port': KUKSA_SERVER_PORT,
+        'protocol': 'ws',
+        'insecure': True
+    }
+    client = KuksaClientThread(config)
+    client.start()
+    client.authorize()
+
+    print(client.setValue('Vehicle.Speed', '90'))
+
+    client.stop()
+
+
+def main():
+    action = sys.argv[1].lower().strip()
+    ref = {
+        'pub': pub,
+        'sub': sub,
+        'getvalue': getvalue,
+        'setvalue': setvalue
+    }
+
+    fn = ref.get(action)
+    if fn is None:
+        sys.stderr.write(f'Invalid action: {action}. Valid choices: {ref.keys()}.\n')
+        sys.exit(1)
+
+    try:
+        fn()
+    except Exception as e:
+        print(e)
+
+
+if __name__ == '__main__':
+    main()
