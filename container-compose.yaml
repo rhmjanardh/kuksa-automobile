@@ -9,13 +9,11 @@ services:
       - 8080:8080
   kuksa-databroker:
     build: ./images/kuksa-databroker
-    links:
-      - kuksa-val-server
-      - kuksa-client
     ports:
       - 55555:55555
   kuksa-client:
     build: ./images/kuksa-client
+    command: ["sleep", "infinity"]
     environment:
       - KUKSA_DATABROKER_HOST=kuksa-databroker
       - KUKSA_SERVER_HOST=kuksa-val-server

@@ -13,7 +13,3 @@ pip
 RUN pip install -U kuksa-client
 
 COPY files/ /
-
-ENTRYPOINT ["/bin/bash", "-c"]
-
-CMD ["sleep", "infinity"]
