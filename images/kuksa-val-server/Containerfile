@@ -1,7 +1,6 @@
 FROM registry.fedoraproject.org/fedora:38
-
-
-ARG KUKSA_VAL_VER=0.3.1
+    
+ARG KUKSA_VAL_VER=0.4.0
 ARG KUKSA_VAL_BUILD_TYPE=Release
 
 # Install required packages
@@ -33,7 +32,6 @@ RUN git clone --branch ${KUKSA_VAL_VER} https://github.com/eclipse/kuksa.val.git
 # Patches
 COPY /files /
 RUN patch -t -i /kuksa.val/kuksa-val-server/grpc.cmake.diff /kuksa.val/kuksa-val-server/grpc.cmake
-
 RUN patch -t -i /kuksa.val/kuksa-val-server/boost.cmake.diff /kuksa.val/kuksa-val-server/boost.cmake
 
 # Build
@@ -52,6 +50,8 @@ make -j 4  && \
 make install && \
 make clean
 
+WORKDIR /
+
 # Move files around
 RUN mkdir -p /etc/kuksa-val-server/{tls,vss}
 
@@ -61,8 +61,6 @@ mv /usr/local/bin/kuksa-val-server/*.pem /etc/kuksa-val-server/tls && \
 mv /usr/local/bin/kuksa-val-server/*.key /etc/kuksa-val-server/tls && \
 mv /usr/local/bin/kuksa-val-server/vss* /etc/kuksa-val-server/vss/
 
-RUN rm -rf /kuksa.val
-
 ENTRYPOINT ["/usr/bin/kuksa-val-server"]
 
-CMD ["--vss", "/etc/kuksa-val-server/vss/vss_release_3.1.1.json", "--cert-path", "/etc/kuksa-val-server/tls", "--log-level", "ALL"]
+CMD ["--insecure", "--vss", "/etc/kuksa-val-server/vss/vss_release_4.0.json", "--cert-path", "/etc/kuksa-val-server/tls", "--log-level", "ALL"]

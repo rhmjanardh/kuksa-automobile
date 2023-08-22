@@ -1,0 +1,66 @@
+FROM registry.fedoraproject.org/fedora:38 AS builder
+
+ARG KUKSA_VER=0.4.0
+
+ENV PATH=$HOME/.cargo/bin:$PATH
+
+RUN dnf  -y update && dnf install -y \
+automake \
+protobuf-compiler \
+protobuf \
+protobuf-devel \
+patch \
+cmake \
+g++ \
+gcc \
+gcc-c++ \
+kernel-devel \
+wget \
+libstdc++ \
+bzip2 \
+grpc \
+grpc-cpp \
+grpc-devel \
+boost \
+boost-devel \
+mosquitto \
+mosquitto-devel \
+rust \
+rust-src \
+git \
+cargo \
+@development-tools \
+openssl-devel \
+python3-yaml \
+net-tools \
+iputils \
+iproute \
+python3-devel \
+pip
+
+RUN cargo install cargo-license
+
+WORKDIR /tmp
+
+RUN git clone -b ${KUKSA_VER} https://github.com/eclipse/kuksa.val.git
+
+WORKDIR /tmp/kuksa.val/kuksa_databroker
+
+RUN (cd createbom; python3 createbom.py ../databroker) && \
+cargo build --release
+
+FROM registry.fedoraproject.org/fedora:38
+
+RUN mkdir -p /etc/vss
+
+COPY --from=builder /tmp/kuksa.val/target/release/databroker /usr/local/bin/kuksa-databroker
+COPY --from=builder /tmp/kuksa.val/target/release/databroker-cli /usr/local/bin/kuksa-databroker-cli
+COPY --from=builder /tmp/kuksa.val/data/vss-core/*.json /etc/vss/
+
+ENV RUST_LOG=DEBUG
+ENV KUKSA_DATA_BROKER_ADDR=0.0.0.0
+ENV KUKSA_DATA_BROKER_PORT=55555
+ENV KUKSA_DATA_BROKER_METADATA_FILE=/etc/vss/vss_release_4.0.json
+
+ENTRYPOINT ["/bin/bash", "-c", "/usr/local/bin/kuksa-databroker"]
+CMD ["--insecure"]
