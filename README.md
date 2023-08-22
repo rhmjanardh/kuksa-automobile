@@ -51,11 +51,11 @@ localhost/kuksa-client:latest
 The databroker can be tested by running pub and sub apps from the kuksa-client container:
 
 ```sh
-podman exec -it kuksa-client pub
+podman exec -it kuksa-client /opt/app/pubsub pub
 ```
 
 ```sh
-podman exec -it kuksa-client sub
+podman exec -it kuksa-client /opt/app/pubsub sub
 ```
 
 ### Kuska Val Server
@@ -63,11 +63,11 @@ podman exec -it kuksa-client sub
 The server can be tested to run both "setvalue" and "getvalue" from the ckuksa-client container:
 
 ```sh
-podman exec -it kuksa-client setvalue
+podman exec -it kuksa-client /opt/app/pubsub setvalue
 ```
 
 ```sh
-podman exec -it kuksa-client getvalue
+podman exec -it kuksa-client /opt/app/pubsub getvalue
 ```
 
 ## License
