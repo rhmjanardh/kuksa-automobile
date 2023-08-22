@@ -4,14 +4,17 @@ networks:
          name: kuksa-network
 services:
   kuksa-val-server:
+    container_name: kuksa-val-server
     build: ./images/kuksa-val-server
     ports:
       - 8080:8080
   kuksa-databroker:
+    container_name: kuksa-databroker
     build: ./images/kuksa-databroker
     ports:
       - 55555:55555
   kuksa-client:
+    container_name: kuksa-client
     build: ./images/kuksa-client
     command: ["sleep", "infinity"]
     environment:

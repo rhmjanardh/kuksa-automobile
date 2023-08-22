@@ -40,7 +40,7 @@ def pub():
 
 def getvalue():
     config = {
-        'address': KUKSA_SERVER_HOST,
+        'ip': KUKSA_SERVER_HOST,
         'port': KUKSA_SERVER_PORT,
         'protocol': 'ws',
         'insecure': True
@@ -56,7 +56,7 @@ def getvalue():
 
 def setvalue():
     config = {
-        'address': KUKSA_SERVER_HOST,
+        'ip': KUKSA_SERVER_HOST,
         'port': KUKSA_SERVER_PORT,
         'protocol': 'ws',
         'insecure': True

@@ -63,4 +63,4 @@ mv /usr/local/bin/kuksa-val-server/vss* /etc/kuksa-val-server/vss/
 
 ENTRYPOINT ["/usr/bin/kuksa-val-server"]
 
-CMD ["--insecure", "--vss", "/etc/kuksa-val-server/vss/vss_release_4.0.json", "--cert-path", "/etc/kuksa-val-server/tls", "--log-level", "ALL"]
+CMD ["--insecure", "--address", "0.0.0.0",  "--vss", "/etc/kuksa-val-server/vss/vss_release_4.0.json", "--cert-path", "/etc/kuksa-val-server/tls", "--log-level", "ALL"]
