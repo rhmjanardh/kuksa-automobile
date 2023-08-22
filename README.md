@@ -4,7 +4,9 @@
 
 ### Podman Compose
 
-podman-compose --podman-args '--remote'  up --force-recreate --build --detach
+```
+podman-compose up --force-recreate --build --detach
+```
 
 ### Manually
 
