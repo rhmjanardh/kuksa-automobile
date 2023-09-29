@@ -1,0 +1,49 @@
+FROM registry.fedoraproject.org/fedora:38 AS builder
+
+ENV PATH=$HOME/.cargo/bin:$PATH
+
+RUN dnf  -y update && dnf install -y \
+automake \
+fontconfig-devel \
+pkg-config \
+protobuf-compiler \
+protobuf \
+protobuf-devel \
+patch \
+cmake \
+g++ \
+gcc \
+gcc-c++ \
+kernel-devel \
+wget \
+libstdc++ \
+bzip2 \
+grpc \
+grpc-cpp \
+grpc-devel \
+boost \
+boost-devel \
+mosquitto \
+mosquitto-devel \
+rust \
+rust-src \
+git \
+cargo \
+@development-tools \
+openssl-devel \
+python3-yaml \
+net-tools \
+iputils \
+iproute \
+python3-devel \
+pip
+
+RUN cargo install cargo-license
+
+WORKDIR /tmp
+
+RUN git clone --recurse-submodules https://github.com/eclipse-ibeji/ibeji
+
+WORKDIR /tmp/ibeji/
+
+RUN cargo build --release
