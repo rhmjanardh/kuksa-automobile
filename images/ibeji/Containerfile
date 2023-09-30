@@ -1,5 +1,6 @@
 FROM registry.fedoraproject.org/fedora:38 AS builder
 
+ENV HOME=/root
 ENV PATH=$HOME/.cargo/bin:$PATH
 
 RUN dnf  -y update && dnf install -y \
@@ -43,7 +44,9 @@ RUN cargo install cargo-license
 WORKDIR /tmp
 
 RUN git clone --recurse-submodules https://github.com/eclipse-ibeji/ibeji
+RUN dnf remove rustc -y
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN source $HOME/.cargo/env
 
-WORKDIR /tmp/ibeji/
-
+WORKDIR /tmp/ibeji
 RUN cargo build --release
