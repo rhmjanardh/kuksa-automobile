@@ -1,6 +1,7 @@
 FROM registry.fedoraproject.org/fedora:38 AS builder
 
 ENV HOME=/root
+ENV DIR=/tmp/ibeji/target/release
 ENV PATH=$HOME/.cargo/bin:$PATH
 
 RUN dnf  -y update && dnf install -y \
@@ -50,3 +51,12 @@ RUN source $HOME/.cargo/env
 
 WORKDIR /tmp/ibeji
 RUN cargo build --release
+
+RUN cp core/invehicle-digital-twin/template/invehicle_digital_twin_settings.yaml $DIR/invehicle_digital_twin_settings.yaml
+RUN echo 'invehicle_digital_twin_authority: "0.0.0.0:5010"' > $DIR/invehicle_digital_twin_settings.yaml
+
+RUN cp samples/common/template/consumer_settings.yaml $DIR/consumer_settings.yaml
+RUN echo 'invehicle_digital_twin_uri: "http://0.0.0.0:5010"' > $DIR/consumer_settings.yaml
+
+RUN cp samples/common/template/provider_settings.yaml $DIR/provider_settings.yaml
+RUN echo 'invehicle_digital_twin_uri: "http://0.0.0.0:5010"' > $DIR/provider_settings.yaml
