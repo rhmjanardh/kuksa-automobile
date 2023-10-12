@@ -1,7 +1,7 @@
+
 FROM registry.fedoraproject.org/fedora:38 AS builder
 
 ENV HOME=/root
-ENV DIR=/tmp/ibeji/target/release
 ENV PATH=$HOME/.cargo/bin:$PATH
 
 RUN dnf  -y update && dnf install -y \
@@ -41,22 +41,36 @@ python3-devel \
 pip
 
 RUN cargo install cargo-license
-
+ENV RUST_BACKTRACE=FULL
+ENV DIR=/tmp/ibeji/target/release
 WORKDIR /tmp
 
 RUN git clone --recurse-submodules https://github.com/eclipse-ibeji/ibeji
+RUN git clone --recurse-submodules https://github.com/eclipse-chariott/Agemo
+
 RUN dnf remove rustc -y
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 RUN source $HOME/.cargo/env
 
 WORKDIR /tmp/ibeji
 RUN cargo build --release
-
+RUN cd external/agemo/pub-sub-service;ls -al
+ENV DIR=/tmp/ibeji/target/release
 RUN cp core/invehicle-digital-twin/template/invehicle_digital_twin_settings.yaml $DIR/invehicle_digital_twin_settings.yaml
-RUN echo 'invehicle_digital_twin_authority: "0.0.0.0:5010"' > $DIR/invehicle_digital_twin_settings.yaml
+RUN echo "invehicle_digital_twin_authority: "0.0.0.0:5010"" > $DIR/invehicle_digital_twin_settings.yaml
 
 RUN cp samples/common/template/consumer_settings.yaml $DIR/consumer_settings.yaml
-RUN echo 'invehicle_digital_twin_uri: "http://0.0.0.0:5010"' > $DIR/consumer_settings.yaml
+RUN echo "invehicle_digital_twin_uri: "http://0.0.0.0:5010"" > $DIR/consumer_settings.yaml
+
+RUN touch $DIR/managed_subscribe_settings.yaml
+RUN echo -e "base_authority: "0.0.0.0:5010"\nmanaged_subscribe_uri: "http://0.0.0.0:50051"" > $DIR/managed_subscribe_settings.yaml
+
 
 RUN cp samples/common/template/provider_settings.yaml $DIR/provider_settings.yaml
-RUN echo 'invehicle_digital_twin_uri: "http://0.0.0.0:5010"' > $DIR/provider_settings.yaml
+RUN echo -e "provider_authority: "0.0.0.0:1883"\ninvehicle_digital_twin_uri: "http://0.0.0.0:5010"" > $DIR/provider_settings.yaml
+
+WORKDIR /tmp/Agemo
+ENV DIR=/tmp/Agemo/target/debug
+RUN cargo build
+RUN cp /tmp/Agemo/pub-sub-service/template/constants_settings.yaml $DIR/constants_settings
+RUN cp /tmp/Agemo/pub-sub-service/template/pub_sub_service_settings.yaml $DIR/pub_sub_service_settings
